@@ -14,3 +14,4 @@ Next step: Run the verification script!
 Command: python VERIFY_TOONS.py
 
 - Claude
+yay, okay cool tell me if you see this claude, yay it worked. 
