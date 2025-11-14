@@ -231,6 +231,13 @@ class RiggedRenderer:
         else:
             self._draw_flat_torso(painter, bottom_pos, top_pos, width)
 
+        # Draw torso center glow if enabled (Toon 1 has this!)
+        if hasattr(self.anatomy, 'HAS_TORSO_GLOW') and self.anatomy.HAS_TORSO_GLOW:
+            cx = (bottom_pos[0] + top_pos[0]) / 2
+            cy = (bottom_pos[1] + top_pos[1]) / 2
+            glow_radius = width * 0.5  # Glow size
+            self._draw_torso_glow(painter, cx, cy, glow_radius)
+
     def _render_hand(self, painter: QPainter, x: float, y: float,
                     width: float, height: float, angle: float):
         """Render hand (detailed fingers or simple mitten)"""
@@ -660,6 +667,50 @@ class RiggedRenderer:
 
         painter.setBrush(QBrush(inner_gradient))
         painter.drawEllipse(QPointF(x, y), inner_radius, inner_radius)
+
+    def _draw_torso_glow(self, painter: QPainter, cx: float, cy: float, radius: float):
+        """Draw glowing center of torso (Toon 1 has cyan chest glow)"""
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        glow_intensity = self.anatomy.glow_intensity
+
+        # Layer 1: Outer glow (soft)
+        outer_radius = radius * 1.5
+        outer_gradient = QRadialGradient(QPointF(cx, cy), outer_radius)
+        outer_gradient.setColorAt(0.0, QColor(
+            self.anatomy.GLOW_COLOR.red(),
+            self.anatomy.GLOW_COLOR.green(),
+            self.anatomy.GLOW_COLOR.blue(),
+            int(255 * 0.20 * glow_intensity)
+        ))
+        outer_gradient.setColorAt(1.0, QColor(
+            self.anatomy.GLOW_COLOR.red(),
+            self.anatomy.GLOW_COLOR.green(),
+            self.anatomy.GLOW_COLOR.blue(),
+            0
+        ))
+
+        painter.setBrush(QBrush(outer_gradient))
+        painter.drawEllipse(QPointF(cx, cy), outer_radius, outer_radius)
+
+        # Layer 2: Inner glow (brighter core)
+        inner_radius = radius * 0.6
+        inner_gradient = QRadialGradient(QPointF(cx, cy), inner_radius)
+        inner_gradient.setColorAt(0.0, QColor(
+            self.anatomy.GLOW_COLOR.red(),
+            self.anatomy.GLOW_COLOR.green(),
+            self.anatomy.GLOW_COLOR.blue(),
+            int(255 * 0.40 * glow_intensity)
+        ))
+        inner_gradient.setColorAt(1.0, QColor(
+            self.anatomy.GLOW_COLOR.red(),
+            self.anatomy.GLOW_COLOR.green(),
+            self.anatomy.GLOW_COLOR.blue(),
+            0
+        ))
+
+        painter.setBrush(QBrush(inner_gradient))
+        painter.drawEllipse(QPointF(cx, cy), inner_radius, inner_radius)
 
     def _draw_ground_shadow(self, painter: QPainter, cx: float, cy: float, scale: float):
         """Draw soft elliptical ground shadow"""

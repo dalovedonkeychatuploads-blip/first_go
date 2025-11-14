@@ -122,6 +122,7 @@ class ToonAnatomy:
     HAS_GLOWS = False              # Glowing joints?
     GLOW_JOINTS = []               # Which joints glow (empty = none)
     HAS_GRADIENTS = True           # Use gradients or flat colors?
+    HAS_TORSO_GLOW = False         # Glowing center of torso?
 
     # Eye dimensions (ratios of head radius)
     EYE_WIDTH_RATIO = 0.35
@@ -333,15 +334,15 @@ class NeonCyanAnatomy(ToonAnatomy):
 
     HAND_WIDTH_RATIO = 0.40
     HAND_HEIGHT_RATIO = 0.475
-    FOOT_WIDTH_RATIO = 0.70
-    FOOT_HEIGHT_RATIO = 0.40
+    FOOT_WIDTH_RATIO = 1.0      # CHUNKY boots (reference shows large feet)
+    FOOT_HEIGHT_RATIO = 0.55    # Taller boots
 
     JOINT_RADIUS_RATIO = 0.225
 
-    # Colors (EXACT from neon_cyan_fighter.py reference)
-    BODY_HIGHLIGHT = QColor(145, 145, 145)  # RGB(145,145,145)
-    BODY_MIDTONE = QColor(69, 69, 69)       # RGB(69,69,69)
-    BODY_SHADOW = QColor(46, 46, 46)        # RGB(46,46,46)
+    # Colors (EXACT from toon1.jpeg reference - VERY DARK body with cyan accents!)
+    BODY_HIGHLIGHT = QColor(50, 50, 50)     # Very dark gray (almost black)
+    BODY_MIDTONE = QColor(35, 35, 35)       # Darker midtone
+    BODY_SHADOW = QColor(20, 20, 20)        # Deep shadow (nearly black)
 
     GLOW_COLOR = QColor(0, 255, 255)        # Cyan RGB(0,255,255)
     GLOW_OPACITY = 0.30                     # Subtle glow
@@ -361,6 +362,7 @@ class NeonCyanAnatomy(ToonAnatomy):
         "ankle_left", "ankle_right"
     ]
     HAS_GRADIENTS = True
+    HAS_TORSO_GLOW = True  # Cyan glow in center of chest (reference shows this!)
 
     # Eye dimensions
     EYE_WIDTH_RATIO = 0.35
@@ -415,8 +417,8 @@ class ShadowRedAnatomy(ToonAnatomy):
 
     HAND_WIDTH_RATIO = 0.233
     HAND_HEIGHT_RATIO = 0.292
-    FOOT_WIDTH_RATIO = 0.267
-    FOOT_HEIGHT_RATIO = 0.208
+    FOOT_WIDTH_RATIO = 0.55    # Larger chunky boots for boss character
+    FOOT_HEIGHT_RATIO = 0.45   # Taller boots
 
     JOINT_RADIUS_RATIO = 0.15
 
