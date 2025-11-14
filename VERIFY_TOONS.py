@@ -75,26 +75,26 @@ class ToonDisplayPage(QWidget):
         # Dark background for toon display
         painter.fillRect(20, display_top, self.width() - 40, display_height, QColor(26, 26, 30))
 
-        # Calculate proper scale to fit ENTIRE toon in display area
-        # Base head diameter is 40 units, toon height = heads_tall * 40
-        # Add 20% padding for arms/feet/margins
-        toon_base_height = self.anatomy.HEADS_TALL * 40 * 1.15
+        # Calculate scale to fit toon in display area
+        # Toon height in base units: heads_tall * 40 (head diameter)
+        toon_base_height = self.anatomy.HEADS_TALL * 40
 
-        # Use 80% of available height to ensure full visibility with margins
-        safe_display_height = display_height * 0.80
+        # Use 70% of display height for safety margins
+        safe_height = display_height * 0.70
 
-        # Calculate scale that fits toon completely
-        scale = safe_display_height / toon_base_height
+        # Calculate scale that fits toon height
+        scale = safe_height / toon_base_height
 
-        # Don't go below 1.0 or above 2.0 for visual consistency
-        scale = max(1.0, min(2.0, scale))
+        # Clamp scale to reasonable range
+        scale = max(0.8, min(1.6, scale))
 
-        # Center position - middle of display area
-        cx = self.width() / 2
-        cy = display_top + (display_height / 2)
+        # CRITICAL: Use NEGATIVE scale to flip Y-axis (skeleton uses Cartesian Y-up, screen uses Y-down)
+        # Position pelvis at BOTTOM, skeleton extends upward with negative scale
+        cx = self.width() / 2  # Horizontal center
+        cy = display_top + display_height - 80  # Near bottom with margin
 
-        # Render with calculated scale
-        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=scale)
+        # Render with NEGATIVE scale to flip Y-axis correctly
+        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=-scale)
 
         # ===== CHECKLIST SECTION =====
         checklist_top = display_top + display_height + 15
