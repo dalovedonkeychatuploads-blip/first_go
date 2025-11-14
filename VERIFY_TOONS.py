@@ -129,13 +129,14 @@ class ToonDisplayPage(QWidget):
         screen_center_y = display_top + display_height / 2
 
         # Offset to center the world-space center of the character
-        # We want: screen_center = render_origin + (world_center * scale)
-        # So: render_origin = screen_center - (world_center * scale)
-        cx = screen_center_x - (world_center_x * scale)
-        cy = screen_center_y - (world_center_y * scale)
+        # Since we use -scale in renderer: screen_pos = origin + world * (-scale)
+        # We want: screen_center = origin + world_center * (-scale)
+        # So: origin = screen_center - (world_center * (-scale)) = screen_center + (world_center * scale)
+        cx = screen_center_x + (world_center_x * scale)
+        cy = screen_center_y + (world_center_y * scale)
 
-        # Render with calculated scale and position
-        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=scale)
+        # Render with NEGATIVE scale to flip Y-axis (skeleton Y-up, screen Y-down)
+        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=-scale)
 
         # ===== CHECKLIST SECTION =====
         checklist_top = display_top + display_height + 15
