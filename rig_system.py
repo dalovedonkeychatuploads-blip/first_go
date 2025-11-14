@@ -231,3 +231,88 @@ class StickmanRig:
             self.add_bone(bone)
 
         self.set_constraints()
+
+
+# ============================================================================
+# T-POSE SKELETON GENERATION - For Perfect Toon Previews
+# ============================================================================
+
+def create_t_pose_skeleton_from_anatomy(anatomy) -> StickmanRig:
+    """
+    Create a T-pose skeleton with proportions from ToonAnatomy.
+
+    T-pose characteristics:
+    - Arms extended horizontally (180° from body)
+    - Legs straight down, slightly apart
+    - Head upright
+    - Neutral standing position
+
+    Args:
+        anatomy: ToonAnatomy instance (provides proportions)
+
+    Returns:
+        StickmanRig configured in T-pose with toon-specific proportions
+    """
+    rig = StickmanRig()
+    rig.bones.clear()  # Clear default bones
+
+    # Get base proportions from anatomy (scale=1.0 for base units)
+    scale = 1.0
+
+    # ===== CREATE BONES WITH TOON-SPECIFIC LENGTHS =====
+
+    # Root (pelvis) - no length, just origin point
+    rig.add_bone(Bone("pelvis", None, 0, 0))
+
+    # Spine (vertical, going up from pelvis)
+    torso_height = anatomy.get_torso_height(scale)
+    spine_lower_len = torso_height * 0.5
+    spine_upper_len = torso_height * 0.5
+
+    rig.add_bone(Bone("spine_lower", "pelvis", spine_lower_len, 90))  # 90° = straight up
+    rig.add_bone(Bone("spine_upper", "spine_lower", spine_upper_len, 0))  # Continue up
+
+    # Neck and head (vertical, continuing up)
+    neck_height = anatomy.get_neck_height(scale)
+    head_diameter = anatomy.get_head_diameter(scale)
+
+    rig.add_bone(Bone("neck", "spine_upper", neck_height, 0))  # Straight up
+    rig.add_bone(Bone("head", "neck", head_diameter / 2, 0))  # Head center (half diameter up)
+
+    # ===== ARMS (T-POSE: HORIZONTAL) =====
+
+    torso_width = anatomy.get_torso_width(scale)
+    upper_arm_len = anatomy.get_upper_arm_length(scale)
+    lower_arm_len = anatomy.get_lower_arm_length(scale)
+    hand_w, hand_h = anatomy.get_hand_dimensions(scale)
+
+    # Left arm (extends to left = 180°)
+    rig.add_bone(Bone("upper_arm_L", "spine_upper", upper_arm_len, 180))  # Left horizontal
+    rig.add_bone(Bone("lower_arm_L", "upper_arm_L", lower_arm_len, 0))  # Continue left
+    rig.add_bone(Bone("hand_L", "lower_arm_L", hand_h, 0))  # Hand extends further
+
+    # Right arm (extends to right = 0°)
+    rig.add_bone(Bone("upper_arm_R", "spine_upper", upper_arm_len, 0))  # Right horizontal
+    rig.add_bone(Bone("lower_arm_R", "upper_arm_R", lower_arm_len, 0))  # Continue right
+    rig.add_bone(Bone("hand_R", "lower_arm_R", hand_h, 0))  # Hand extends further
+
+    # ===== LEGS (STRAIGHT DOWN, SLIGHTLY APART) =====
+
+    upper_leg_len = anatomy.get_upper_leg_length(scale)
+    lower_leg_len = anatomy.get_lower_leg_length(scale)
+    foot_w, foot_h = anatomy.get_foot_dimensions(scale)
+
+    # Left leg (slight outward angle for stability)
+    rig.add_bone(Bone("thigh_L", "pelvis", upper_leg_len, -95))  # Down and slightly left
+    rig.add_bone(Bone("shin_L", "thigh_L", lower_leg_len, 0))  # Continue down
+    rig.add_bone(Bone("foot_L", "shin_L", foot_h, 90))  # Foot forward
+
+    # Right leg (slight outward angle for stability)
+    rig.add_bone(Bone("thigh_R", "pelvis", upper_leg_len, -85))  # Down and slightly right
+    rig.add_bone(Bone("shin_R", "thigh_R", lower_leg_len, 0))  # Continue down
+    rig.add_bone(Bone("foot_R", "shin_R", foot_h, 90))  # Foot forward
+
+    # Apply standard constraints
+    rig.set_constraints()
+
+    return rig
