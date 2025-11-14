@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python error_handler.py:*)",
+      "Bash(dir:*)",
+      "Bash(python main.py:*)",
+      "Bash(if exist __pycache__ rmdir /s /q __pycache__)",
+      "Bash(if exist animations__pycache__ rmdir /s /q animations__pycache__)",
+      "Bash(if exist effects__pycache__ rmdir /s /q effects__pycache__)",
+      "Bash(if exist rendering__pycache__ rmdir /s /q rendering__pycache__)",
+      "Bash(python:*)",
+      "Bash(timeout 3 sleep:*)",
+      "Bash(find:*)",
+      "Bash(SESSION_TRACKER.txt)",
+      "Bash(del LAUNCH_APP.bat)",
+      "Bash(del:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)",
+      "Bash(timeout 2 sleep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
