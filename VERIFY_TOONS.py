@@ -75,26 +75,67 @@ class ToonDisplayPage(QWidget):
         # Dark background for toon display
         painter.fillRect(20, display_top, self.width() - 40, display_height, QColor(26, 26, 30))
 
-        # Calculate scale to fit toon in display area
-        # Toon height in base units: heads_tall * 40 (head diameter)
-        toon_base_height = self.anatomy.HEADS_TALL * 40
+        # ===== COMPUTE REAL BOUNDING BOX FROM SKELETON =====
+        # Get all joint positions in world space (before scaling)
+        transforms = self.skeleton.get_joint_transforms()
 
-        # Use 70% of display height for safety margins
-        safe_height = display_height * 0.70
+        if not transforms:
+            # Fallback if no transforms
+            cx = self.width() / 2
+            cy = display_top + display_height / 2
+            self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=1.0)
+            painter.end()
+            return
 
-        # Calculate scale that fits toon height
-        scale = safe_height / toon_base_height
+        # Find bounding box of all joints
+        all_x = [pos[0] for pos in transforms.values()]
+        all_y = [pos[1] for pos in transforms.values()]
 
-        # Clamp scale to reasonable range
-        scale = max(0.8, min(1.6, scale))
+        world_min_x = min(all_x)
+        world_max_x = max(all_x)
+        world_min_y = min(all_y)
+        world_max_y = max(all_y)
 
-        # CRITICAL: Use NEGATIVE scale to flip Y-axis (skeleton uses Cartesian Y-up, screen uses Y-down)
-        # Position pelvis at BOTTOM, skeleton extends upward with negative scale
-        cx = self.width() / 2  # Horizontal center
-        cy = display_top + display_height - 80  # Near bottom with margin
+        world_width = world_max_x - world_min_x
+        world_height = world_max_y - world_min_y
 
-        # Render with NEGATIVE scale to flip Y-axis correctly
-        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=-scale)
+        # World-space center of character
+        world_center_x = (world_min_x + world_max_x) / 2
+        world_center_y = (world_min_y + world_max_y) / 2
+
+        # ===== CALCULATE SCALE TO FIT ENTIRE TOON =====
+        # Available display area (with padding)
+        display_left = 20
+        display_rect_width = self.width() - 40
+        display_rect_height = display_height
+
+        # Use 85% of available space to leave margins
+        usable_width = display_rect_width * 0.85
+        usable_height = display_rect_height * 0.85
+
+        # Calculate scale to fit width AND height
+        scale_x = usable_width / world_width if world_width > 0 else 1.0
+        scale_y = usable_height / world_height if world_height > 0 else 1.0
+
+        # Use the smaller scale to ensure BOTH dimensions fit
+        scale = min(scale_x, scale_y)
+
+        # Cap at 3.0 to avoid absurd zoom, but NO lower limit (allow < 1.0 if needed)
+        scale = min(3.0, scale)
+
+        # ===== POSITION TOON IN CENTER OF DISPLAY AREA =====
+        # Screen center of display area
+        screen_center_x = self.width() / 2
+        screen_center_y = display_top + display_height / 2
+
+        # Offset to center the world-space center of the character
+        # We want: screen_center = render_origin + (world_center * scale)
+        # So: render_origin = screen_center - (world_center * scale)
+        cx = screen_center_x - (world_center_x * scale)
+        cy = screen_center_y - (world_center_y * scale)
+
+        # Render with calculated scale and position
+        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=scale)
 
         # ===== CHECKLIST SECTION =====
         checklist_top = display_top + display_height + 15
