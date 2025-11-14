@@ -40,7 +40,7 @@ class ToonDisplayPage(QWidget):
         self.renderer = RiggedRenderer(anatomy)
         self.skeleton = create_t_pose_skeleton_from_anatomy(anatomy)
 
-        self.setMinimumSize(900, 650)
+        self.setMinimumSize(1100, 750)  # Larger canvas for full toon
         self.setStyleSheet("background: #0d0d0f;")
 
     def paintEvent(self, event):
@@ -75,12 +75,26 @@ class ToonDisplayPage(QWidget):
         # Dark background for toon display
         painter.fillRect(20, display_top, self.width() - 40, display_height, QColor(26, 26, 30))
 
-        # Center position for toon (large scale for detail visibility)
+        # Calculate proper scale to fit ENTIRE toon in display area
+        # Base head diameter is 40 units, toon height = heads_tall * 40
+        # Add 20% padding for arms/feet/margins
+        toon_base_height = self.anatomy.HEADS_TALL * 40 * 1.15
+
+        # Use 80% of available height to ensure full visibility with margins
+        safe_display_height = display_height * 0.80
+
+        # Calculate scale that fits toon completely
+        scale = safe_display_height / toon_base_height
+
+        # Don't go below 1.0 or above 2.0 for visual consistency
+        scale = max(1.0, min(2.0, scale))
+
+        # Center position - middle of display area
         cx = self.width() / 2
         cy = display_top + (display_height / 2)
 
-        # LARGE SCALE (3.5x) - User can see ALL details clearly
-        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=3.5)
+        # Render with calculated scale
+        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=scale)
 
         # ===== CHECKLIST SECTION =====
         checklist_top = display_top + display_height + 15
@@ -113,7 +127,7 @@ class PaginatedVerificationWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("VERIFY TOONS - Paginated Visual Verification")
-        self.setGeometry(80, 80, 1000, 750)
+        self.setGeometry(50, 50, 1200, 900)  # LARGER window for full toon visibility
         self.setStyleSheet("background: #0d0d0f;")
 
         self.current_page = 0  # Track current toon (0, 1, or 2)
