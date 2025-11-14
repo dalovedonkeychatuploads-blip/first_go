@@ -1,23 +1,25 @@
 """
-VERIFY TOONS - Final Visual Verification Before Testing
-========================================================
+VERIFY TOONS - Paginated Visual Verification (1 Toon Per Page)
+================================================================
 
-This script shows all 3 toons side-by-side with dark background
-to match reference images. Use this to verify visuals are PERFECT
-before integrating into Tab 1.
+Shows each of the 3 default toons on separate pages with large scale
+for perfect visual verification against reference images.
 
-WHAT TO CHECK:
-1. Toon 1: DARK body (almost black), cyan glows on joints + chest
-2. Toon 2: DARK body, red eyes ONLY (no joint glows), chunky
-3. Toon 3: Pure black, googly eyes, minimalist
-4. All have chunky feet/boots
-5. T-pose is clean (arms horizontal, legs down)
+NAVIGATION:
+- Next/Previous buttons to cycle through toons
+- Page indicator shows which toon (1 of 3, 2 of 3, 3 of 3)
 
-Run this, verify they match your reference images, then proceed!
+WHAT TO CHECK PER TOON:
+1. Toon 1 (Neon Cyan): DARK body, cyan glows on joints + chest, 5 fingers
+2. Toon 2 (Shadow Red): DARK body, red eyes ONLY, chunky proportions
+3. Toon 3 (Googly Eyes): Pure black, googly eyes, minimalist
+
+Press Next to compare each toon against its reference image!
 """
 
 import sys
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel
+from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+                                QLabel, QPushButton)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QFont
 
@@ -26,167 +28,298 @@ from rigged_renderer import RiggedRenderer
 from rig_system import create_t_pose_skeleton_from_anatomy
 
 
-class ToonCard(QWidget):
-    """Card showing a single toon with name and details"""
+class ToonDisplayPage(QWidget):
+    """Full-page display for a single toon with large scale"""
 
-    def __init__(self, toon_name, anatomy, details, parent=None):
+    def __init__(self, toon_name, anatomy, checklist, reference_file, parent=None):
         super().__init__(parent)
         self.toon_name = toon_name
         self.anatomy = anatomy
-        self.details = details
+        self.checklist = checklist
+        self.reference_file = reference_file
         self.renderer = RiggedRenderer(anatomy)
         self.skeleton = create_t_pose_skeleton_from_anatomy(anatomy)
 
-        self.setMinimumSize(350, 550)
-        # Dark background to match reference images
-        self.setStyleSheet("background: #1a1a1e; border: 2px solid #3a3a3e; border-radius: 8px;")
+        self.setMinimumSize(900, 650)
+        self.setStyleSheet("background: #0d0d0f;")
 
     def paintEvent(self, event):
-        """Render the toon card"""
+        """Render the full-page toon display"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Center position for toon (slightly higher to leave room for text)
-        cx = self.width() / 2
-        cy = self.height() / 2 - 20
+        # ===== HEADER SECTION =====
+        header_height = 80
 
-        # Render toon at center with scale 1.8 for better visibility
-        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=1.8)
+        # Draw header background
+        painter.fillRect(0, 0, self.width(), header_height, QColor(42, 42, 46))
 
-        # Draw title at top
-        font_title = QFont("Arial", 16, QFont.Weight.Bold)
+        # Draw toon name (left side)
+        font_title = QFont("Arial", 24, QFont.Weight.Bold)
         painter.setFont(font_title)
         painter.setPen(QColor(255, 255, 255))
-        painter.drawText(10, 30, self.toon_name)
+        painter.drawText(30, 45, self.toon_name)
 
-        # Draw details at bottom
-        font_details = QFont("Arial", 10)
-        painter.setFont(font_details)
+        # Draw reference filename (right side)
+        font_ref = QFont("Arial", 14)
+        painter.setFont(font_ref)
+        painter.setPen(QColor(100, 200, 255))
+        ref_text = f"📸 Compare with: {self.reference_file}"
+        ref_width = painter.fontMetrics().horizontalAdvance(ref_text)
+        painter.drawText(self.width() - ref_width - 30, 45, ref_text)
+
+        # ===== MAIN DISPLAY AREA =====
+        display_top = header_height + 20
+        display_height = self.height() - header_height - 180  # Leave room for footer
+
+        # Dark background for toon display
+        painter.fillRect(20, display_top, self.width() - 40, display_height, QColor(26, 26, 30))
+
+        # Center position for toon (large scale for detail visibility)
+        cx = self.width() / 2
+        cy = display_top + (display_height / 2)
+
+        # LARGE SCALE (3.5x) - User can see ALL details clearly
+        self.renderer.render_from_skeleton(painter, self.skeleton, cx, cy, scale=3.5)
+
+        # ===== CHECKLIST SECTION =====
+        checklist_top = display_top + display_height + 15
+
+        # Draw checklist background
+        painter.fillRect(20, checklist_top, self.width() - 40, 140, QColor(26, 26, 30))
+
+        # Draw "VERIFICATION CHECKLIST" header
+        font_checklist_header = QFont("Arial", 14, QFont.Weight.Bold)
+        painter.setFont(font_checklist_header)
+        painter.setPen(QColor(255, 200, 0))
+        painter.drawText(35, checklist_top + 25, "🔍 VERIFICATION CHECKLIST:")
+
+        # Draw checklist items
+        font_checklist = QFont("Arial", 12)
+        painter.setFont(font_checklist)
         painter.setPen(QColor(180, 180, 180))
-        y_offset = self.height() - 80
-        for line in self.details:
-            painter.drawText(10, y_offset, line)
-            y_offset += 18
+
+        y_offset = checklist_top + 50
+        for item in self.checklist:
+            painter.drawText(50, y_offset, item)
+            y_offset += 22
 
         painter.end()
 
 
-class VerificationWindow(QWidget):
-    """Main verification window with all 3 toons"""
+class PaginatedVerificationWindow(QWidget):
+    """Main window with paginated toon display (1 toon per page)"""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("VERIFY TOONS - Match Against Reference Images")
-        self.setGeometry(50, 50, 1150, 700)
+        self.setWindowTitle("VERIFY TOONS - Paginated Visual Verification")
+        self.setGeometry(80, 80, 1000, 750)
         self.setStyleSheet("background: #0d0d0f;")
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
+        self.current_page = 0  # Track current toon (0, 1, or 2)
 
-        # Main title
-        title = QLabel("🎯 VISUAL VERIFICATION - Compare Against Reference Images")
-        title.setStyleSheet("""
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            padding: 15px;
-            background: #2a2a2e;
-            border-radius: 6px;
-        """)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
-
-        layout.addSpacing(15)
-
-        # Toon cards in horizontal layout
-        cards_layout = QHBoxLayout()
-        cards_layout.setSpacing(15)
+        # ===== CREATE TOON DATA =====
 
         # Toon 1: Neon Cyan
         cyan_anatomy = create_neon_cyan_anatomy()
-        toon1_details = [
-            f"✓ {cyan_anatomy.HEADS_TALL} heads tall (sleek)",
-            "✓ DARK body (almost black)",
-            "✓ Cyan glows: joints + chest",
-            "✓ 5-finger detailed hands",
-            "✓ Chunky boots"
+        toon1_checklist = [
+            f"✓ Height: {cyan_anatomy.HEADS_TALL} heads tall (sleek athletic build)",
+            "✓ Body: VERY DARK gray (almost black) - NOT medium gray!",
+            "✓ Cyan glows on ALL joints (shoulders, elbows, wrists, hips, knees, ankles)",
+            "✓ Cyan glow in center of chest/torso",
+            "✓ Hands: 5 detailed fingers visible",
+            "✓ Feet: Chunky boots (large, rounded)"
         ]
-        self.card1 = ToonCard("TOON 1: Neon Cyan", cyan_anatomy, toon1_details)
-        cards_layout.addWidget(self.card1)
 
         # Toon 2: Shadow Red
         red_anatomy = create_shadow_red_anatomy()
-        toon2_details = [
-            f"✓ {red_anatomy.HEADS_TALL} heads tall (chunky)",
-            "✓ Very dark body",
-            "✓ Red EYES ONLY (no joint glows)",
-            "✓ Simple mitten hands",
-            "✓ Wide power stance"
+        toon2_checklist = [
+            f"✓ Height: {red_anatomy.HEADS_TALL} heads tall (chunky muscular build)",
+            "✓ Body: Very dark (darker than Toon 1)",
+            "✓ Red slit eyes ONLY - NO joint glows anywhere else",
+            "✓ Hands: Simple mitten style (NO fingers)",
+            "✓ Proportions: Wide shoulders, thick limbs (power stance)",
+            "✓ Feet: Large chunky boots"
         ]
-        self.card2 = ToonCard("TOON 2: Shadow Red", red_anatomy, toon2_details)
-        cards_layout.addWidget(self.card2)
 
         # Toon 3: Googly Eyes
         googly_anatomy = create_googly_eyes_anatomy()
-        toon3_details = [
-            f"✓ {googly_anatomy.HEADS_TALL} heads tall (classic)",
-            "✓ Pure black body",
-            "✓ White googly eyes",
-            "✓ NO gradients (flat)",
-            "✓ Minimalist style"
+        toon3_checklist = [
+            f"✓ Height: {googly_anatomy.HEADS_TALL} heads tall (classic stickman)",
+            "✓ Body: Pure BLACK (no gradients, flat color only)",
+            "✓ Eyes: White googly cartoon eyes (large circles)",
+            "✓ NO glows anywhere (minimalist style)",
+            "✓ Hands: Simple mitten style",
+            "✓ Clean minimalist silhouette"
         ]
-        self.card3 = ToonCard("TOON 3: Googly Eyes", googly_anatomy, toon3_details)
-        cards_layout.addWidget(self.card3)
 
-        layout.addLayout(cards_layout)
+        # Store toon pages data
+        self.pages = [
+            {
+                "name": "TOON 1: Neon Cyan Fighter",
+                "anatomy": cyan_anatomy,
+                "checklist": toon1_checklist,
+                "reference": "toon1.jpeg"
+            },
+            {
+                "name": "TOON 2: Shadow Red Fighter",
+                "anatomy": red_anatomy,
+                "checklist": toon2_checklist,
+                "reference": "toon2.jpeg"
+            },
+            {
+                "name": "TOON 3: Googly Eyes Fighter",
+                "anatomy": googly_anatomy,
+                "checklist": toon3_checklist,
+                "reference": "toon3.jpeg"
+            }
+        ]
 
-        layout.addSpacing(15)
+        # ===== CREATE UI =====
 
-        # Instructions
-        instructions = QLabel(
-            "📋 CHECKLIST: Compare each toon against reference images (toon1.jpeg, toon2.jpeg, toon3.jpeg)\n"
-            "   ✓ Body colors match (darkness level, gradients)\n"
-            "   ✓ Glows in correct locations (cyan vs red vs none)\n"
-            "   ✓ Proportions correct (tall vs chunky vs classic)\n"
-            "   ✓ Hands match (detailed vs simple)\n"
-            "   ✓ Eyes match (slits vs googly)\n\n"
-            "Close window when satisfied, then proceed to Tab 1 integration!"
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Toon display area (takes most of the space)
+        self.display_widget = ToonDisplayPage(
+            self.pages[0]["name"],
+            self.pages[0]["anatomy"],
+            self.pages[0]["checklist"],
+            self.pages[0]["reference"]
         )
-        instructions.setStyleSheet("""
-            color: #b0b0b0;
-            font-size: 11px;
-            padding: 15px;
-            background: #1a1a1e;
-            border-radius: 6px;
-            line-height: 1.6;
+        layout.addWidget(self.display_widget)
+
+        # Navigation bar at bottom
+        nav_bar = QWidget()
+        nav_bar.setStyleSheet("background: #1a1a1e;")
+        nav_bar.setFixedHeight(70)
+
+        nav_layout = QHBoxLayout(nav_bar)
+        nav_layout.setContentsMargins(30, 15, 30, 15)
+
+        # Previous button
+        self.btn_prev = QPushButton("◀ Previous")
+        self.btn_prev.setStyleSheet("""
+            QPushButton {
+                background: #3a3a3e;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 10px 30px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background: #4a4a4e;
+            }
+            QPushButton:disabled {
+                background: #2a2a2e;
+                color: #606060;
+            }
         """)
-        instructions.setWordWrap(True)
-        layout.addWidget(instructions)
+        self.btn_prev.clicked.connect(self.go_to_previous)
+        nav_layout.addWidget(self.btn_prev)
+
+        # Page indicator (center)
+        self.page_label = QLabel()
+        self.page_label.setStyleSheet("""
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 10px;
+        """)
+        self.page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        nav_layout.addWidget(self.page_label, 1)  # Stretch to fill center
+
+        # Next button
+        self.btn_next = QPushButton("Next ▶")
+        self.btn_next.setStyleSheet("""
+            QPushButton {
+                background: #0066cc;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 10px 30px;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background: #0077ee;
+            }
+            QPushButton:disabled {
+                background: #2a2a2e;
+                color: #606060;
+            }
+        """)
+        self.btn_next.clicked.connect(self.go_to_next)
+        nav_layout.addWidget(self.btn_next)
+
+        layout.addWidget(nav_bar)
+
+        # Update UI for initial page
+        self.update_page_display()
+
+    def go_to_next(self):
+        """Navigate to next toon"""
+        if self.current_page < len(self.pages) - 1:
+            self.current_page += 1
+            self.update_page_display()
+
+    def go_to_previous(self):
+        """Navigate to previous toon"""
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.update_page_display()
+
+    def update_page_display(self):
+        """Update display for current page"""
+        page_data = self.pages[self.current_page]
+
+        # Update display widget with new toon data
+        self.display_widget.toon_name = page_data["name"]
+        self.display_widget.anatomy = page_data["anatomy"]
+        self.display_widget.checklist = page_data["checklist"]
+        self.display_widget.reference_file = page_data["reference"]
+        self.display_widget.renderer = RiggedRenderer(page_data["anatomy"])
+        self.display_widget.skeleton = create_t_pose_skeleton_from_anatomy(page_data["anatomy"])
+        self.display_widget.update()  # Trigger repaint
+
+        # Update page indicator
+        self.page_label.setText(f"Toon {self.current_page + 1} of {len(self.pages)}")
+
+        # Update button states
+        self.btn_prev.setEnabled(self.current_page > 0)
+        self.btn_next.setEnabled(self.current_page < len(self.pages) - 1)
 
 
 def main():
-    """Run verification"""
+    """Run paginated verification"""
     app = QApplication(sys.argv)
 
-    window = VerificationWindow()
+    window = PaginatedVerificationWindow()
     window.show()
 
     print("\n" + "="*70)
-    print("   🎯 TOON VISUAL VERIFICATION")
+    print("   🎯 PAGINATED TOON VERIFICATION")
     print("="*70)
-    print("\n📸 Compare the rendered toons against your reference images:")
-    print("   - toon1.jpeg: Neon Cyan (dark body, cyan glows)")
-    print("   - toon2.jpeg: Shadow Red (dark body, red eyes)")
-    print("   - toon3.jpeg: Googly Eyes (black body, googly eyes)")
-    print("\n🔍 What to check:")
-    print("   [x] Body darkness level (Toon 1 & 2 should be VERY dark)")
-    print("   [x] Glow locations (Toon 1: joints+chest, Toon 2: eyes only)")
-    print("   [x] Proportions (Toon 1: 6.5h, Toon 2: 4.2h, Toon 3: 7h)")
-    print("   [x] Hand detail (Toon 1: 5 fingers, others: simple)")
-    print("   [x] Feet size (all have chunky boots)")
-    print("   [x] Eye style (Toon 1&2: slits, Toon 3: googly)")
-    print("\n✅ If everything matches, close window and proceed!")
-    print("❌ If something is off, note it and we'll fix it.")
+    print("\n✨ NEW DESIGN: One toon per page with LARGE scale!")
+    print("\n📋 Instructions:")
+    print("   1. Compare the rendered toon against its reference image")
+    print("   2. Check ALL items in the verification checklist")
+    print("   3. Press 'Next' to verify the next toon")
+    print("   4. Go through all 3 toons systematically")
+    print("\n📸 Reference Images:")
+    print("   - Page 1: toon1.jpeg (Neon Cyan - dark body, cyan glows)")
+    print("   - Page 2: toon2.jpeg (Shadow Red - dark body, red eyes only)")
+    print("   - Page 3: toon3.jpeg (Googly Eyes - pure black, googly eyes)")
+    print("\n🔍 LARGE SCALE (3.5x) - You can see every detail!")
+    print("   - Glow effects are clearly visible")
+    print("   - 5-finger hands on Toon 1 are distinct")
+    print("   - Body darkness levels are accurate")
+    print("   - Chunky boots are prominent")
+    print("\n✅ If all 3 toons match references perfectly, you're ready!")
+    print("❌ If something looks wrong, note which toon and what's off.")
     print("\n" + "="*70 + "\n")
 
     sys.exit(app.exec())
